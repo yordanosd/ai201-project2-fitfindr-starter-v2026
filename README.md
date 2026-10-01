@@ -59,24 +59,96 @@
 
 ### `search_listings`
 
-- **What it does:**
-- **Inputs:** <!-- name and type each: `max_price` (float), not "a price" -->
+- **Search the listings data for items matching a description, and optionally a
+    size and a price ceiling.:**
+- **Inputs:**
+
+    ```
+    - description: string
+    - size (Optional): string
+    - max_price (Optional): float
+  ``` 
+<!-- name and type each: `max_price` (float), not "a price" -->
 - **Returns:**
+    ```
+    A list of matching listing dicts, best match first.
+  
+    Each listing dict has these fields:
+        id (string), title (string), description (string), category (string), style_tags (list[string]), size (string),
+        condition (string), price (float), colors (list[string]), brand (str or None), platform (string)
+    ```
+
 - **When it has nothing:**
+     ```
+    an empty list, not None
+    ```
 
 ### `suggest_outfit`
 
 - **What it does:**
+
+    ```
+    Given a thrifted item and the user's wardrobe, suggest one or two outfits.
+    ```
 - **Inputs:**
+    ```
+    new_item: a listing dict — the item the user is considering.
+      {
+        "id": "string — unique identifier for this item",
+        "name": "string — short description of the piece",
+        "category": "string — one of: tops, bottoms, outerwear, shoes, accessories",
+        "colors": ["string — list of colors this item contains"],
+        "style_tags": ["string — list of style descriptors"],
+        "notes": "string (optional) — any notes about fit, how the user styles it, etc."
+      }
+  
+    wardrobe: a wardrobe dict with an 'items' key holding a list of items.
+              It may be empty.
+      {
+        "items": [
+          {
+          "id": "string — unique identifier for this item",
+          "name": "string — short description of the piece",
+          "category": "string — one of: tops, bottoms, outerwear, shoes, accessories",
+          "colors": ["string — list of colors this item contains"],
+          "style_tags": ["string — list of style descriptors"],
+          "notes": "string (optional) — any notes about fit, how the user styles it, etc."
+        }
+      }
+    ```
 - **Returns:**
+    ```
+    String:
+    A non-empty string with outfit suggestions.
+    ```
 - **When it has nothing:**
+    ```
+    With an empty wardrobe, return general styling advice rather than
+    raising or returning.
+    ```
+
 
 ### `create_fit_card`
 
 - **What it does:**
+
+    ```
+    Write a short caption someone would actually post about the find.
+    ```
 - **Inputs:**
+    ```        
+  outfit (String):   the outfit suggestion string from suggest_outfit().
+  new_item (String): the listing dict for the item.
+    ```
 - **Returns:**
+    ```
+   String: A two-to-four sentence caption.
+    ```
 - **When it has nothing:**
+    ```
+    If `outfit` is empty or whitespace, return a descriptive message rather
+    than raising.
+    ```
 
 ---
 
