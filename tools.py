@@ -151,7 +151,7 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
     Test it from a terminal before you move on:
         python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
     """
-    if not wardrobe["items"]:
+    if not wardrobe or not wardrobe["items"]:
         prompt = (
             f"New item:\n{_describe_item(new_item)}\n\n"
             "The user hasn't saved a wardrobe. Suggest outfits using common basics, "
@@ -229,5 +229,31 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     Test it from a terminal before you move on:
         python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('jeans and white sneakers', load_listings()[0]))"
     """
-    # TODO: replace this with your implementation
-    return ""
+    if not outfit or not outfit.strip():
+        return "Couldn't write a fit card: no outfit suggestion was provided for this item."
+
+    platform = PLATFORM_NAMES.get(new_item["platform"], new_item["platform"])
+    price = f"${new_item['price']:.0f}"
+    brand = f" by {new_item['brand']}" if new_item["brand"] else ""
+
+    prompt = (
+        f"Item: {new_item['title']}{brand}\n"
+        f"Price: {price}\n"
+        f"Platform: {platform}\n"
+        f"Vibe: {', '.join(new_item['style_tags'])}; colors: {', '.join(new_item['colors'])}\n\n"
+        f"Outfit ideas:\n{outfit}"
+    )
+
+    return generate(prompt, system=FIT_CARD_SYSTEM, cache=False)
+
+
+PLATFORM_NAMES = {"depop": "Depop", "poshmark": "Poshmark", "thredUp": "thredUP"}
+
+FIT_CARD_SYSTEM = (
+    "Write a caption someone would post about a thrifted find, in a casual first-person voice. "
+    "2 to 4 sentences. No hashtags, no markdown, no intro like 'Here's a caption'. "
+    "Use a short, natural name for the item, not the full listing title. "
+    "Mention the price and the platform exactly once each, written exactly as given. "
+    "Pick one of the outfits and describe that look specifically. "
+    "Open with something specific to this item, not a generic opener like 'Just thrifted' or 'Obsessed with'."
+)
