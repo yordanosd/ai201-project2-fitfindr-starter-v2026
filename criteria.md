@@ -28,6 +28,9 @@ tool calls and returns a fit card — in at least 4 of 5 tries.
 <!-- Why 4 of 5 and not 5 of 5? Something about your search, probably —
      "my search is a plain keyword match and some phrasings will miss" is a
      real answer. -->
+My search is a plain keyword match, so a query that should match can still come back empty when the wording differs from the listing ("jackets" vs. "jacket," "sneakers" vs. 
+"trainers"). That's why I allow one miss instead of requiring 5 of 5. I don't go lower than 4 because once search returns an item, the other two tools just pass it along, so 
+they shouldn't add failures of their own.
 
 ---
 
@@ -39,6 +42,10 @@ Given a query that matches no listings, the agent stops before calling
 **Why this target:**
 <!-- Why is 5 of 5 reasonable here when criterion 1 isn't? What's different
      about this path? -->
+
+Unlike criterion 1, nothing here depends on the model or on how the user phrases the query. When search returns no results, a plain if check sets session["error"] and ends the
+loop before suggest_outfit runs, so it should happen every time. The only way this fails is if search falsely matches something (for example, a substring test where "s" 
+matches "us 9"). That would be a bug I can fix, not acceptable variation.
 
 ---
 
@@ -54,11 +61,12 @@ Given a query that matches no listings, the agent stops before calling
      compares session["selected_item"] against what actually reached
      suggest_outfit is the shape you're after. -->
 
-
+Given a query that matches at least one listing, the item suggest_outfit receives has the same id as session["selected_item"], and the item named in the fit card is that same 
+item — 5 of 5 tries.
 
 **Why this target:**
-
-
+ When a match occurs, we pass it directly to the other tools as a parameter, so it should be handled the same way every time. If the wrong item is passed, it's a bug in my 
+loop. The fit card is the only part written by a model, so if it names a different item, the fix is in how I prompt it.
 
 ---
 
@@ -75,10 +83,12 @@ Given a query that matches no listings, the agent stops before calling
      sentence? A card longer than a caption anyone would post? Any of those can
      be turned into a number. -->
 
-
+For 5 different matching items, each fit card mentions the item's actual listing price as a 
+dollar amount — 5 of 5 tries.
 
 **Why this target:**
-
+Price is what a buyer looks at first on a resale listing, so a card that leaves it out fails at its job. My fit card tool passes the price to the model directly, so a 
+missing or wrong price means my prompt needs fixing, not that the model got unlucky.
 
 
 ---
@@ -92,11 +102,13 @@ Given a query that matches no listings, the agent stops before calling
      search respects a price ceiling — anything, as long as it names a number
      or an observable outcome. -->
 
-
+Given a query with a price limit (for example, "under $30"), every listing search returns has a price at or below that limit — 5 of 5 tries, using 5 different phrasings of the
+limit.
 
 **Why this target:**
 
-
+I want to confirm that the user's max price is respected. This happens during search, so it confirms the filter is in place. The filter is a plain numeric comparison with no 
+model involved, so it should work every time, and any item over the limit means a bug in my search.
 
 ---
 
