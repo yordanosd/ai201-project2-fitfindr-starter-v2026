@@ -19,6 +19,7 @@ type, exactly what it returns, and what it returns when it has nothing to give.
 That last line is what your loop branches on. "Returns a list" earns nothing —
 the description has to say what is *in* the list.
 """
+import re
 
 import config  # noqa: F401 — you'll use this in search_listings
 from generate import generate
@@ -78,8 +79,46 @@ def search_listings(
     Test it from a terminal before you move on:
         python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
     """
-    # TODO: replace this with your implementation
-    return []
+    listings = load_listings()
+
+    if listings is None:
+        return []
+
+    filtered_listings = [
+        listing for listing in listings
+        if (max_price is None or listing["price"] <= max_price)
+           and (size is None or listing["size"] == size)
+    ]
+
+    query_words = _clean_words(description)
+
+    scored_listings = []
+    for listing in filtered_listings:
+        listing_text = " ".join([
+            listing["title"],
+            listing["description"],
+            listing["category"],
+            *listing["style_tags"],
+            *listing["colors"],
+            listing["brand"] or "",
+        ])
+        score = len(query_words & _clean_words(listing_text))
+        if score > 0:
+            scored_listings.append((score, listing))
+
+    scored_listings.sort(key=lambda pair: pair[0], reverse=True)
+
+    return [listing for _, listing in scored_listings[:config.SEARCH_RESULT_LIMIT]]
+
+
+STOP_WORDS = {"a", "an", "the", "for", "with", "and", "in", "of", "to", "on", "or"}
+
+
+def _clean_words(text: str) -> set[str]:
+    """Lowercase, strip punctuation, drop filler words, and trim a trailing "s"
+    so "jackets" matches "jacket"."""
+    words = re.findall(r"[a-z0-9']+", text.lower())
+    return {word.rstrip("s") for word in words if word not in STOP_WORDS}
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
