@@ -169,6 +169,10 @@
 **Where it lives:** `agent.py::run_agent`
 
 **How the query is parsed:** <!-- regex, string splitting, or asking the model — say which -->
+How the query is parsed: Regex, not the model, in agent.py::parse_query. It uses a predefined set of words and patterns to find a size or price in the query and turns them 
+into values the search filter can use (for example, "under $30" becomes max_price = 30). Because the patterns are written by hand, the parser can miss what the user means if 
+they phrase it in a way I didn't plan for, like "cheap," "under thirty," or "medium" without the word "size." When that happens, the words stay in the description and search 
+runs without that filter.
 
 **What moves through the session:** <!-- which fields, in what order -->
 
@@ -186,6 +190,51 @@
 ```
 $ python app.py ask '...'
 
+```
+```
+❯   python app.py ask '90s track jacket in size M'
+
+  Found:    90s Track Jacket — Navy/White Stripe — $45.0 on poshmark
+
+  Outfit:   Here are two ways to style your new **90s Track Jacket — Navy/White Stripe**:
+
+**Sporty Streetwear**
+Pair the 90s Track Jacket — Navy/White Stripe over the white ribbed tank top with the baggy straight-leg jeans, and finish the look with the chunky white sneakers.
+
+**Casual Contrast**
+Layer the 90s Track Jacket — Navy/White Stripe over the white ribbed tank top with the wide-leg khaki trousers, and complete the outfit with the chunky white sneakers.
+
+  Fit card: That navy and white champion jacket is so crisp and I scored it on Poshmark for just $45. I threw it on over a white ribbed tank top with some baggy straight-leg jeans and finished the fit with chunky white sneakers. It honestly feels like the ultimate thrifted weekend uniform.
+
+2 model calls this session, 662 prompt + 168 output tokens
+```
+
+Matches Nothing
+```
+❯  python app.py ask 'designer ballgown size XXS under $5'                                 
+
+No listings matched "designer ballgown" with size XXS and under $5. Try removing the size XXS or under $5 filter, or use different keywords.
+
+0 model calls this session
+```
+
+```
+❯ python agent.py
+=== A query the data can match ===
+  found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+  outfit:   **Streetwear Contrast**
+Pair the Y2K Baby Tee — Butterfly Print with baggy straight-leg jeans, dark wash, and chunky white sneakers for an effortless early 2000s look.
+
+**Edgy Retro**
+Layer the Vintage black denim jacket over the Y2K Baby Tee — Butterfly Print, and finish with wide-leg khaki trousers and black combat boots.
+  fit card: This little butterfly tee brings me right back to middle school in the best way possible. I scored it on Depop for just $18 and it's already my new favorite piece. I love wearing it with baggy straight-leg jeans and chunky white sneakers for an effortless early 2000s look.
+
+=== A query it can't ===
+  stopped: No listings matched "designer ballgown" with size XXS and under $5. Try removing the size XXS or under $5 filter, or use different keywords.
+  fit_card is None — it should still be None here
+
+The second one should stop before the fit card. If both paths look the same,
+the branch isn't doing anything yet.
 ```
 
 **The three tools, tested one at a time**
@@ -245,14 +294,53 @@ These vintage Levi's fit like an absolute dream and I can't believe I found them
 **Moment 1**
 
 - *What I asked for:*
+- Create the parsing for the user input
 - *What came back:*
+- 
+```
+# ── query parsing ─────────────────────────────────────────────────────────────
+
+# "under $30", "below 30", "less than $30", "max $30", "up to 30", "no more than $30",
+# and a bare "$30", "$30 max", "$30 or less"
+PRICE_PATTERN = re.compile(
+    r"\b(?:under|below|less than|max|up to|no more than)\s*\$?\s*(\d+(?:\.\d+)?)"
+    r"|\$\s*(\d+(?:\.\d+)?)(?:\s*(?:max|or less))?",
+    re.IGNORECASE,
+)
+
+# "size M", "size xl", "size US 9", "size W30", "size small"
+SIZE_PATTERN = re.compile(
+    r"\bsize\s+(us\s*\d+(?:\.\d+)?|w\d+(?:\s*l\d+)?|xxs|xs|xxl|xl|small|medium|large|s|m|l)\b",
+    re.IGNORECASE,
+)
+SIZE_WORDS = {"small": "S", "medium": "M", "large": "L"}
+
+FILLER_PATTERN = re.compile(
+    r"\b(?:i'?m looking for|looking for|i want|i need|find me|show me|something|please)\b",
+    re.IGNORECASE,
+)
+  
+```
 - *What I changed:*
+It helped me come up with a system to parse the query and use it as a filter.
 
 **Moment 2**
 
 - *What I asked for:*
+- Create a prompt for `create_fit_card`.
 - *What came back:*
+```
+FIT_CARD_SYSTEM = (
+    "Write a caption someone would post about a thrifted find, in a casual first-person voice. "
+    "2 to 4 sentences. No hashtags, no markdown, no intro like 'Here's a caption'. "
+    "Use a short, natural name for the item, not the full listing title. "
+    "Mention the price and the platform exactly once each, written exactly as given. "
+    "Pick one of the outfits and describe that look specifically. "
+    "Open with something specific to this item, not a generic opener like 'Just thrifted' or 'Obsessed with'."
+)
+```
 - *What I changed:*
+- Added fit card system prompt.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
