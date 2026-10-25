@@ -177,7 +177,8 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
 OUTFIT_SYSTEM = (
     "You help someone decide whether to buy a thrifted item by showing how they'd wear it. "
     "Suggest 1 or 2 outfits. For each, give a short title and one sentence. "
-    "Always refer to the new item by its title."
+    "Always refer to the new item by its title. "
+    "Make sure each outfit is something a person could physically wear."
 )
 
 
