@@ -151,8 +151,46 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
     Test it from a terminal before you move on:
         python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
     """
-    # TODO: replace this with your implementation
-    return ""
+    if not wardrobe["items"]:
+        prompt = (
+            f"New item:\n{_describe_item(new_item)}\n\n"
+            "The user hasn't saved a wardrobe. Suggest outfits using common basics, "
+            "and say these are general ideas."
+        )
+    else:
+        pieces = "\n".join(
+            f"- {piece['name']} ({piece['category']}; {', '.join(piece['colors'])}; "
+            f"{', '.join(piece['style_tags'])})"
+            + (f" — {piece['notes']}" if piece.get("notes") else "")
+            for piece in wardrobe["items"]
+        )
+        prompt = (
+            f"New item:\n{_describe_item(new_item)}\n\n"
+            f"User's wardrobe:\n{pieces}\n\n"
+            "Only use pieces from the user's wardrobe, and name each one. "
+            "Never invent pieces they don't own."
+        )
+
+    return generate(prompt, system=OUTFIT_SYSTEM)
+
+
+OUTFIT_SYSTEM = (
+    "You help someone decide whether to buy a thrifted item by showing how they'd wear it. "
+    "Suggest 1 or 2 outfits. For each, give a short title and one sentence. "
+    "Always refer to the new item by its title."
+)
+
+
+def _describe_item(item: dict) -> str:
+    """Format a listing for a prompt, skipping brand when it's missing."""
+    brand = f"\nBrand: {item['brand']}" if item["brand"] else ""
+    return (
+        f"Title: {item['title']}{brand}\n"
+        f"Category: {item['category']}, condition: {item['condition']}\n"
+        f"Colors: {', '.join(item['colors'])}\n"
+        f"Style: {', '.join(item['style_tags'])}\n"
+        f"Description: {item['description']}"
+    )
 
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
