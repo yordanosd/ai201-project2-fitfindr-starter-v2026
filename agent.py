@@ -52,13 +52,20 @@ def new_session(query: str, wardrobe: dict) -> dict:
 
 # ── query parsing ─────────────────────────────────────────────────────────────
 
-# "under $30", "below 30", "less than $30", "max $30", "up to 30", "no more than $30",
-# and a bare "$30", "$30 max", "$30 or less"
-PRICE_PATTERN = re.compile(
-    r"\b(?:under|below|less than|max|up to|no more than)\s*\$?\s*(\d+(?:\.\d+)?)"
-    r"|\$\s*(\d+(?:\.\d+)?)(?:\s*(?:max|or less))?",
-    re.IGNORECASE,
-)
+NUMBER = r"(\d+(?:\.\d+)?)"
+
+# Tried in order; the first that matches sets max_price.
+PRICE_PATTERNS = [
+    # A range takes its upper number: "between $20 and $50", "$20-$50", "$20 to $50"
+    re.compile(rf"\bbetween\s*\$?\s*{NUMBER}\s*(?:and|to|-)\s*\$?\s*{NUMBER}(?:\s*dollars?)?", re.IGNORECASE),
+    re.compile(rf"\$\s*{NUMBER}\s*(?:-|to)\s*\$?\s*{NUMBER}", re.IGNORECASE),
+    # "under $30", "below 30", "less than $30", "max $30", "up to 30", "no more than $30"
+    re.compile(rf"\b(?:under|below|less than|max|up to|no more than)\s*\$?\s*{NUMBER}(?:\s*dollars?)?", re.IGNORECASE),
+    # "50 max", "$25 max", "50 dollars or less", "$30 or less"
+    re.compile(rf"\$?\s*\b{NUMBER}\s*(?:dollars?\s*)?(?:max|or less)\b", re.IGNORECASE),
+    # a bare "$30"
+    re.compile(rf"\$\s*{NUMBER}(?:\s*dollars?)?", re.IGNORECASE),
+]
 
 # "size M", "size xl", "size US 9", "size W30", "size small"
 SIZE_PATTERN = re.compile(
@@ -81,9 +88,12 @@ def parse_query(query: str) -> dict:
     Anything not recognised as a size or price stays in the description.
     """
     max_price = None
-    price_match = PRICE_PATTERN.search(query)
-    if price_match:
-        max_price = float(price_match.group(1) or price_match.group(2))
+    price_match = None
+    for pattern in PRICE_PATTERNS:
+        price_match = pattern.search(query)
+        if price_match:
+            max_price = max(float(number) for number in price_match.groups() if number)
+            break
 
     size = None
     size_match = SIZE_PATTERN.search(query)
