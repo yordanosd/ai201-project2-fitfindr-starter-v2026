@@ -362,17 +362,56 @@ FIT_CARD_SYSTEM = (
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. A matching query completes all three tools | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. An impossible query stops before the second tool | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. Item suggest_outfit receives matches session["selected_item"] | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card mentions the item's actual price | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. Every search result is at or below the price limit | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+
+Full log: `results/run_2026-10-25_2042_before.md`
 
 **Real output from one try**, pasted as text, naming the file and function
 that produced it:
 
-```
+Produced by `run_eval.py::main`, running `agent.py::run_agent`. Criterion 1, try 1:
 
+```
+- Query: vintage graphic tee under $30
+- Wardrobe: example
+- stopped early: no
+- selected_item: Y2K Baby Tee — Butterfly Print ($18.0, depop)
+- search_results: 10
+
+Outfit suggestion:
+**Streetwear Contrast**
+Pair the Y2K Baby Tee — Butterfly Print with baggy straight-leg jeans, dark wash, and finish the look with chunky white sneakers.
+
+**Casual Vintage**
+Tuck the Y2K Baby Tee — Butterfly Print into wide-leg khaki trousers, add the brown leather belt, and layer the vintage black denim jacket on top with black combat boots.
+
+Fit card:
+This butterfly tee is giving me all the middle school nostalgia I didn't know I needed. I scored it on Depop for just $18 and it's practically brand new. I'm wearing it tucked into wide-leg khaki trousers with a brown leather belt, finished off with a vintage black denim jacket and black combat boots.
+
+Trace:
+[1] new session
+      in:  {"query": "vintage graphic tee under $30", "wardrobe": {"items": [{"id": "w_001", "name": "Baggy straight-leg …
+[2] search_listings
+      in:  {   "description": "vintage graphic tee",   "size": null,   "max_price": 30.0 }
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+[3] outfit_suggestion
+      in:  {"new_item": {"id": "lst_002", "title": "Y2K Baby Tee — Butterfly Print", "description": "Super cute earl…
+      out: **Streetwear Contrast** Pair the Y2K Baby Tee — Butterfly Print with baggy straight-leg jeans, dark wash, and …
+[4] create_fit_card
+      in:  {"outfit": "**Streetwear Contrast**\nPair the Y2K Baby Tee — Butterfly Print with baggy straight-leg jean…
+      out: This butterfly tee is giving me all the middle school nostalgia I didn't know I needed. I scored it on Depop f…
+      
+  Outfit:   **Streetwear Contrast**
+Pair the Y2K Baby Tee — Butterfly Print with baggy straight-leg jeans, dark wash, and chunky white sneakers for an effortless early 2000s look.
+
+**Edgy Retro**
+Layer the Vintage black denim jacket over the Y2K Baby Tee — Butterfly Print, and finish with wide-leg khaki trousers and black combat boots.
+
+  Fit card: This butterfly tee fits like an absolute dream and I still can't believe I found it on Depop for just $18. I paired it with baggy straight-leg jeans in a dark wash and chunky white sneakers to lean fully into the nostalgic early 2000s energy. It is definitely going to be my new summer go-to.
 ```
 
 ---
