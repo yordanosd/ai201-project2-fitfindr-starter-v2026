@@ -12,7 +12,7 @@ Build and test your three tools in `tools.py` first. Then come here.
 
     python agent.py          runs both example paths below
 """
-
+import json
 import re
 
 import config
@@ -150,7 +150,12 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     """
     # 1. Start a session with new_session().
     session = new_session(query, wardrobe)
-
+    trace.step(
+        name="new session",
+        inputs=json.dumps({
+            "query": query,
+            "wardrobe":wardrobe
+            }))
     # 2. Count the times round the loop, and call trace.check_iterations(count)
     #  on each one before you go again. It raises when the count passes
     #  MAX_ITERATIONS in config.py — see trace.py.
@@ -178,7 +183,7 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     #     parsed["description"],
     #     size=parsed["size"],
     #     max_price=parsed["max_price"],
-    # ) 
+    # )
 
     # MCP call to search_listings
 
@@ -189,6 +194,11 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     }
     session["search_results"] = call_tool(name="search_listings", arguments=arguments)
 
+    trace.step(
+        name="search_listings",
+        inputs=json.dumps(arguments, indent=2),
+        returned=session["search_results"]
+    )
     if not session["search_results"]:
         session["error"] = _no_results_message(parsed)
         return session
@@ -204,6 +214,14 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         new_item=session["selected_item"],
         wardrobe=session["wardrobe"],
     )
+    trace.step(
+        name="outfit_suggestion",
+        inputs=json.dumps({
+            "new_item": session["selected_item"],
+            "wardrobe": session["wardrobe"],
+        }),
+        returned=session["outfit_suggestion"]
+    )
 
     # 7. Call create_fit_card() with the outfit and the item.
     #  Put the result in session["fit_card"].
@@ -212,6 +230,14 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         new_item=session["selected_item"]
     )
 
+    trace.step(
+        name="create_fit_card",
+        inputs=json.dumps({
+            "outfit": session["outfit_suggestion"],
+            "new_item": session["selected_item"]
+        }),
+        returned=session["fit_card"]
+    )
     # 8. Return the session.
     return session
 

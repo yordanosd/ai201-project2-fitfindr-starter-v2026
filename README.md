@@ -424,13 +424,87 @@ that produced it:
 **Happy path**
 
 ```
+❯ python app.py ask 'vintage graphic tee' --trace
+[1] new session
+      in:  {"query": "vintage graphic tee", "wardrobe": {"items": [{"id": "w_001", "name": "Baggy straight-leg jeans, dar…
+[2] search_listings
+      in:  {   "description": "vintage graphic tee",   "size": null,   "max_price": null }
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+[3] outfit_suggestion
+      in:  {"new_item": {"id": "lst_002", "title": "Y2K Baby Tee \u2014 Butterfly Print", "description": "Super cute earl…
+      out: **Streetwear Contrast** Pair the Y2K Baby Tee — Butterfly Print with baggy straight-leg jeans, dark wash, and …
+[4] create_fit_card
+      in:  {"outfit": "**Streetwear Contrast**\nPair the Y2K Baby Tee \u2014 Butterfly Print with baggy straight-leg jean…
+      out: This little pink butterfly tee is honestly the cutest thing I’ve scored all month. I found it on Depop for jus…
 
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+
+  Outfit:   **Streetwear Contrast**
+Pair the Y2K Baby Tee — Butterfly Print with baggy straight-leg jeans, dark wash, and chunky white sneakers for an effortless early 2000s look.
+
+**Edgy Retro**
+Layer the Vintage black denim jacket over the Y2K Baby Tee — Butterfly Print, and finish with wide-leg khaki trousers and black combat boots.
+
+  Fit card: This little pink butterfly tee is honestly the cutest thing I’ve scored all month. I found it on Depop for just $18 and it fits like an absolute dream. I’m thinking of wearing it with baggy straight-leg jeans in a dark wash and some chunky white sneakers for the ultimate early 2000s look.
+
+1 model calls this session, 1 served from cache, 239 prompt + 70 output tokens
 ```
 
 **Empty search**
 
 ```
+❯ python app.py ask '' --trace --empty-wardrobe 
+(running with an empty wardrobe)
+Ask for something, or press Enter on an empty line to quit.
 
+> 
+0 model calls this session
+```
+
+**Empty Wardrobe**
+```
+❯ python app.py ask 'vintage graphic tee' --trace --empty-wardrobe
+(running with an empty wardrobe)
+[1] new session
+      in:  {"query": "vintage graphic tee", "wardrobe": {"items": []}}
+[2] search_listings
+      in:  {   "description": "vintage graphic tee",   "size": null,   "max_price": null }
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+[3] outfit_suggestion
+      in:  {"new_item": {"id": "lst_002", "title": "Y2K Baby Tee \u2014 Butterfly Print", "description": "Super cute earl…
+      out: Here are a couple of general ideas for how you could style your new **Y2K Baby Tee — Butterfly Print** using b…
+[4] create_fit_card
+      in:  {"outfit": "Here are a couple of general ideas for how you could style your new **Y2K Baby Tee \u2014 Butterfl…
+      out: Found the cutest little butterfly tee on Depop for just $18. I am definitely styling it the sweet and sporty w…
+
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+
+  Outfit:   Here are a couple of general ideas for how you could style your new **Y2K Baby Tee — Butterfly Print** using basic wardrobe staples:
+
+**90s Casual**
+Pair the Y2K Baby Tee — Butterfly Print with your favorite mid-rise straight-leg blue jeans and white canvas sneakers for an effortless everyday look.
+
+**Sweet and Sporty**
+Tuck the Y2K Baby Tee — Butterfly Print into a pleated white tennis skirt and finish the outfit with chunky platform sandals.
+
+  Fit card: Found the cutest little butterfly tee on Depop for just $18. I am definitely styling it the sweet and sporty way by tucking it into a pleated white tennis skirt and finishing the whole outfit with chunky platform sandals. It has the prettiest pink and purple details that just scream early 2000s nostalgia.
+
+1 model calls this session, 1 served from cache, 262 prompt + 65 output tokens
+```
+
+**Model Unavailable**
+```
+[1] new session
+      in:  {"query": "vintage graphic tee", "wardrobe": {"items": [{"id": "w_001", "name": "Baggy straight-leg jeans, dar…
+[2] search_listings
+      in:  {   "description": "vintage graphic tee",   "size": null,   "max_price": null }
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+[3] outfit_suggestion
+      in:  {"new_item": {"id": "lst_002", "title": "Y2K Baby Tee \u2014 Butterfly Print", "description": "Super cute earl…
+      out: **Streetwear Contrast** Pair the Y2K Baby Tee — Butterfly Print with baggy straight-leg jeans, dark wash, and …
+1 model calls this session, 1 served from cache
+
+ModelUnavailable: The model rejected your API key. Check GEMINI_API_KEY in your .env file, or create a fresh key at aistudio.google.com.
 ```
 
 **On the MCP move:** <!-- what changed in your code, and whether anything
