@@ -366,9 +366,16 @@ FIT_CARD_SYSTEM = (
 | 2. An impossible query stops before the second tool | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 | 3. Item suggest_outfit receives matches session["selected_item"] | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 | 4. Fit card mentions the item's actual price | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
-| 5. Every search result is at or below the price limit | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. Every search result is at or below the price limit | 5 of 5 | PASS | PASS | FAIL | FAIL | FAIL | MISSED (2/5) |
 
-Full log: `results/run_2026-10-25_2042_before.md`
+Full log: `results/run_2026-10-25_2119_before.md`
+
+Criteria 4 and 5 say "5 different items" and "5 different phrasings", so for those two rows each Try column is a different input:
+
+- **Criterion 4:** Try 1–5 are the cargo pants ($27), baby tee ($18), denim jacket ($42), leather bomber ($75) and canvas sneakers ($20). Each item ran 5 times, and all 25 fit cards contained the item's price.
+- **Criterion 5:** Try 1–5 are "under $50", "below 50", "50 max", "50 dollars or less" and "under fifty", each on "denim jacket". Search doesn't call the model, so each phrasing gave the same result on all 5 of its runs.
+
+My first before run (`results/run_2026-10-25_2042_before.md`) tested one item for criterion 4 and one phrasing for criterion 5, and passed everything. It didn't test those criteria as written, so I fixed the scenarios and reran before changing any agent code. The table above is the rerun.
 
 **Real output from one try**, pasted as text, naming the file and function
 that produced it:
@@ -414,6 +421,21 @@ Layer the Vintage black denim jacket over the Y2K Baby Tee — Butterfly Print, 
   Fit card: This butterfly tee fits like an absolute dream and I still can't believe I found it on Depop for just $18. I paired it with baggy straight-leg jeans in a dark wash and chunky white sneakers to lean fully into the nostalgic early 2000s energy. It is definitely going to be my new summer go-to.
 ```
 
+Criterion 5, "50 max", try 1 (FAIL), from `results/run_2026-10-25_2119_before.md`:
+
+```
+- Query: denim jacket 50 max
+- stopped early: no
+- selected_item: Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+- search_results: 8
+
+[2] search_listings
+      in:  {   "description": "denim jacket 50 max",   "size": null,   "max_price": null }
+      out: 8 items: Denim Jacket — Light Wash, Cropped, Vintage Levi's 501 Jeans — Medium Wash, 90s Track Jacket — Navy/White Stripe … +5 more
+```
+
+`max_price` is `null`, so search ran with no limit and returned 8 results instead of 7. The extra one is the $75 leather bomber.
+
 ---
 
 ## Verdicts and Diagnoses
@@ -439,14 +461,18 @@ Layer the Vintage black denim jacket over the Y2K Baby Tee — Butterfly Print, 
 | 1 | A matching query completes all three tools | 4 of 5 | MET (5/5) | Every try for "vintage graphic tee under $30" ran search, suggest_outfit and create_fit_card, and ended with a fit card. |
 | 2 | An impossible query stops before the second tool | 5 of 5 | MET (5/5) | Every try for "designer ballgown size XXS under $5" got `[]` from search and stopped before suggest_outfit, with a message naming the size and price filters to remove. |
 | 3 | Item suggest_outfit receives matches session["selected_item"] | 5 of 5 | MET (5/5) | In every trace, the top search result and the `new_item` that reached suggest_outfit were both `lst_007`, and every fit card described that same cropped denim jacket. |
-| 4 | Fit card mentions the item's actual price | 5 of 5 | MET (5/5) | I searched each full fit card in the results file for "$27", the cargo pants' listing price. All 5 had it. Only one item was tested (see below). |
-| 5 | Every search result is at or below the price limit | 5 of 5 | MET (5/5) | All 7 results for "denim jacket under $50" were $24–$45. Without the filter, the same search returns a $75 leather bomber, so the filter did the work. Only one phrasing was tested (see below). |
+| 4 | Fit card mentions the item's actual price | 5 of 5 | MET (5/5) | I searched each full fit card in the results file for that item's price ("$27", "$18", "$42", "$75", "$20"). All 25 cards across the 5 items had it. |
+| 5 | Every search result is at or below the price limit | 5 of 5 | MISSED (2/5) | For each phrasing I checked the parsed `max_price` in the trace and the prices of every result. "under $50" and "below 50" returned 7 results, all $24–$45. "50 max", "50 dollars or less" and "under fifty" parsed to `max_price = null` and each returned the $75 leather bomber. |
 
 **Diagnoses**
 
-Nothing missed. All five criteria passed 5 of 5.
+**Criterion 5 missed on 3 of 5 phrasings, and all 3 have the same cause.** The miss happened in the query parsing step (`agent.py::parse_query`), not in search. The price regex only knew phrasings where a keyword comes before the number ("under 50") or a "$" is attached to it ("$50 max"). "50 max" and "50 dollars or less" put the keyword after a bare number, and "under fifty" writes the number as a word. None of them matched, so `parse_query` returned `max_price = None`, and search treats `None` as "no limit". Search itself worked: it applied exactly the limit it was given, which was none. The failure is silent. The user still sees a $42 jacket at the top, but the $75 bomber is in their results even though they asked for 50 max.
 
-**The scenarios didn't test criteria 4 and 5 as written.** Criterion 4 says "5 different matching items", but all 5 tries used the same query, so the fit card was tested on one item (the $27 cargo pants) five times. Criterion 5 says "5 different phrasings of the limit", but all 5 tries used "under $50". Search doesn't call the model, so five tries of the same query can only return the same results, which makes four of those tries repeats. The criteria can be measured; my scenarios just didn't measure them. Before the "after" run, I'll add 5 different items for criterion 4 and 5 phrasings ("below 50", "$50 max", "no more than $50", "up to 50", "under $50") for criterion 5.
+**A second parsing bug that criterion 5 can't see.** "between $20 and $50" (a diagnostic run) parsed as `max_price = 20`, because the regex took the first dollar amount. Search found nothing under $20 and stopped with "No listings matched". Criterion 5 only checks that nothing is *over* the limit, and an empty result passes that. So this bug passes my criterion while hiding every jacket from $20 to $50. It's the same step and the same kind of cause (the price regex reading the query wrong), so I treat it as part of one problem.
+
+**Criteria 1–4 held, as expected.** Criteria 2 and 3 are plain code (an `if` check and passing a dictionary), so 5 of 5 is what they should do. Criterion 4 is the only one that depends on model output, and it held on all 5 items.
+
+**How I got here.** My first before run passed everything, but it tested criterion 4 on one item and criterion 5 on one phrasing. I fixed the scenarios to match what the criteria say and reran without touching the agent, and that rerun is where the miss appeared.
 
 **Were my targets too low?** Criterion 1 is the one I'd tighten. I allowed 4 of 5 because keyword search can miss plurals and synonyms, but I tested it with "vintage graphic tee", three words that appear in the listings exactly as typed. That query was never going to miss. A fair test would use the phrasings I said would break it, like "graphic tees" or "trainers". My search already handles plurals, so I'd expect plurals to pass and synonyms to fail.
 
@@ -623,28 +649,28 @@ The range case is the worst, because it fails silently: the user gets fewer resu
 
      SUBMISSION CHECKLIST — unit 3
 
-       [ ] criteria.md has five numbered criteria, each with a target
-       [ ] Each criterion has a reason underneath it
-       [ ] All five unit 3 sections above have real content
-       [ ] Tool Inventory: all three tools, inputs WITH TYPES, a specific
+       [X] criteria.md has five numbered criteria, each with a target
+       [X] Each criterion has a reason underneath it
+       [X] All five unit 3 sections above have real content
+       [X] Tool Inventory: all three tools, inputs WITH TYPES, a specific
            return value, and the empty case
-       [ ] Planning Loop names the branch rule and agent.py::run_agent
-       [ ] Sample Run: one full query plus the three per-tool tests, as text
-       [ ] At least four new commits
-       [ ] Repository URL submitted — WRITE IT DOWN, you submit the same one
+       [X] Planning Loop names the branch rule and agent.py::run_agent
+       [X] Sample Run: one full query plus the three per-tool tests, as text
+       [X] At least four new commits
+       [X] Repository URL submitted — WRITE IT DOWN, you submit the same one
            next unit
 
      SUBMISSION CHECKLIST — unit 4
 
-       [ ] mcp_server.py exists with one tool registered
+       [X] mcp_server.py exists with one tool registered
            (or a written record of exactly where the rewire broke)
-       [ ] Run Log — Before, five criteria, five tries each
-       [ ] Real output pasted underneath, naming file and function
-       [ ] A verdict on every criterion
-       [ ] A diagnosis for every miss, naming a place AND a mechanism
-       [ ] Loop Trace, with the MCP call visible in it
-       [ ] All three failure modes triggered and handled
-       [ ] One improvement, with Run Log — After in the same format
+       [X] Run Log — Before, five criteria, five tries each
+       [X] Real output pasted underneath, naming file and function
+       [X] A verdict on every criterion
+       [X] A diagnosis for every miss, naming a place AND a mechanism
+       [X] Loop Trace, with the MCP call visible in it
+       [X] All three failure modes triggered and handled
+       [X] One improvement, with Run Log — After in the same format
        [ ] What's Still Broken
        [ ] At least four new commits
        [ ] The SAME repository URL as last unit
