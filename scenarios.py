@@ -47,6 +47,27 @@ SCENARIOS = [
     # For a fit-card criterion, you probably want the SAME query listed more
     # than once, or several different items, depending on what your criterion
     # actually says.
+    {
+        # suggest_outfit receives the same id as session["selected_item"]. Criterion 3.
+        "name": "selected item reaches suggest_outfit",
+        "query": "denim jacket under $50",
+        "wardrobe": "example",
+        "criterion": 3,
+    },
+    {
+        # Fit card mentions the item's actual price. Criterion 4.
+        "name": "fit card shows item price",
+        "query": "cargo pants under $40",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        # Every search result is at or under the limit. Criterion 5.
+        "name": "max price filters search results",
+        "query": "denim jacket under $50",
+        "wardrobe": "example",
+        "criterion": 5,
+    },
 ]
 
 WARDROBES = ("example", "empty")
