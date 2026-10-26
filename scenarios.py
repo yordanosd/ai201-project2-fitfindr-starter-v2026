@@ -54,19 +54,78 @@ SCENARIOS = [
         "wardrobe": "example",
         "criterion": 3,
     },
+    # Fit card mentions the item's actual price. Criterion 4 says 5 different
+    # items, so one scenario per item.
     {
-        # Fit card mentions the item's actual price. Criterion 4.
-        "name": "fit card shows item price",
+        "name": "fit card shows item price — cargo pants ($27)",
         "query": "cargo pants under $40",
         "wardrobe": "example",
         "criterion": 4,
     },
     {
-        # Every search result is at or under the limit. Criterion 5.
-        "name": "max price filters search results",
+        "name": "fit card shows item price — baby tee ($18)",
+        "query": "vintage graphic tee under $30",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        "name": "fit card shows item price — denim jacket ($42)",
+        "query": "denim jacket under $50",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        "name": "fit card shows item price — leather bomber ($75)",
+        "query": "leather bomber",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        "name": "fit card shows item price — canvas sneakers ($20)",
+        "query": "sneakers size US 9",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    # Every search result is at or under the limit. Criterion 5 says 5
+    # different phrasings, so one scenario per phrasing. Without a limit,
+    # "denim jacket" also returns a $75 leather bomber, so a missed limit shows.
+    {
+        "name": "max price — 'under $50'",
         "query": "denim jacket under $50",
         "wardrobe": "example",
         "criterion": 5,
+    },
+    {
+        "name": "max price — 'below 50'",
+        "query": "denim jacket below 50",
+        "wardrobe": "example",
+        "criterion": 5,
+    },
+    {
+        "name": "max price — '50 max'",
+        "query": "denim jacket 50 max",
+        "wardrobe": "example",
+        "criterion": 5,
+    },
+    {
+        "name": "max price — '50 dollars or less'",
+        "query": "denim jacket 50 dollars or less",
+        "wardrobe": "example",
+        "criterion": 5,
+    },
+    {
+        "name": "max price — 'under fifty'",
+        "query": "denim jacket under fifty",
+        "wardrobe": "example",
+        "criterion": 5,
+    },
+    {
+        # A price range. Criterion 5 can't see this bug (0 results has nothing
+        # over the limit), so it's a diagnostic run.
+        "name": "price range — 'between $20 and $50'",
+        "query": "denim jacket between $20 and $50",
+        "wardrobe": "example",
+        "criterion": None,
     },
 ]
 
