@@ -436,13 +436,21 @@ Layer the Vintage black denim jacket over the Y2K Baby Tee — Butterfly Print, 
 
 | # | Criterion | Target | Verdict | How I decided |
 |---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
+| 1 | A matching query completes all three tools | 4 of 5 | MET (5/5) | Every try for "vintage graphic tee under $30" ran search, suggest_outfit and create_fit_card, and ended with a fit card. |
+| 2 | An impossible query stops before the second tool | 5 of 5 | MET (5/5) | Every try for "designer ballgown size XXS under $5" got `[]` from search and stopped before suggest_outfit, with a message naming the size and price filters to remove. |
+| 3 | Item suggest_outfit receives matches session["selected_item"] | 5 of 5 | MET (5/5) | In every trace, the top search result and the `new_item` that reached suggest_outfit were both `lst_007`, and every fit card described that same cropped denim jacket. |
+| 4 | Fit card mentions the item's actual price | 5 of 5 | MET (5/5) | I searched each full fit card in the results file for "$27", the cargo pants' listing price. All 5 had it. Only one item was tested (see below). |
+| 5 | Every search result is at or below the price limit | 5 of 5 | MET (5/5) | All 7 results for "denim jacket under $50" were $24–$45. Without the filter, the same search returns a $75 leather bomber, so the filter did the work. Only one phrasing was tested (see below). |
 
 **Diagnoses**
+
+Nothing missed. All five criteria passed 5 of 5.
+
+**The scenarios didn't test criteria 4 and 5 as written.** Criterion 4 says "5 different matching items", but all 5 tries used the same query, so the fit card was tested on one item (the $27 cargo pants) five times. Criterion 5 says "5 different phrasings of the limit", but all 5 tries used "under $50". Search doesn't call the model, so five tries of the same query can only return the same results, which makes four of those tries repeats. The criteria can be measured; my scenarios just didn't measure them. Before the "after" run, I'll add 5 different items for criterion 4 and 5 phrasings ("below 50", "$50 max", "no more than $50", "up to 50", "under $50") for criterion 5.
+
+**Were my targets too low?** Criterion 1 is the one I'd tighten. I allowed 4 of 5 because keyword search can miss plurals and synonyms, but I tested it with "vintage graphic tee", three words that appear in the listings exactly as typed. That query was never going to miss. A fair test would use the phrasings I said would break it, like "graphic tees" or "trainers". My search already handles plurals, so I'd expect plurals to pass and synonyms to fail.
+
+Criteria 2, 3 and 5 are about plain code (an `if` check, dictionary passing and a numeric comparison), so 5 of 5 is the right target, and passing them is what I expected. Criterion 4 is the only one that depends on model output, and it held 5 of 5, but only on one item.
 
 
 
@@ -590,6 +598,24 @@ full. -->
 <!-- For each criterion still missed: what you'd do, and why you stopped where
      you did. "I ran out of time" is fine if it's true. Pretending nothing is
      left is not. -->
+
+No criterion missed, but my tests only covered the easy version of each one. These are the cases I haven't tested properly, or that I checked by hand and found broken.
+
+**Price phrasings beyond "under $X".** The run only used "under $50". I checked a few other ways a user might write a price by calling `agent.py::parse_query` directly:
+
+| Query | Parsed `max_price` | Problem |
+|---|---|---|
+| `denim jacket between $20 and $40` | 20 | A range reads as its *lower* number, so every item from $20 to $40 is filtered out |
+| `denim jacket $20-$40` | 20 | Same as above |
+| `denim jacket 50 max` | None | "max" after a number without "$" isn't recognised, so no price limit is applied |
+| `denim jacket under thirty` | None | Numbers written as words aren't recognised |
+| `cheap denim jacket` | None | Vague price words aren't recognised |
+
+The range case is the worst, because it fails silently: the user gets fewer results and nothing says why. The fix would be a range pattern that takes the upper number, checked before the single-price pattern. Criterion 5 should be retested with these phrasings, which is what "5 different phrasings" in the criterion was meant to cover.
+
+**A listing with no price.** Every listing in `data/listings.json` has a price today, so this never came up. But if one were `None`, `tools.py::create_fit_card` would crash formatting it (`TypeError: unsupported format string passed to NoneType.__format__`), and the price filter in `search_listings` would crash comparing it. Real resale data has gaps like this, the same way most listings have no brand. The fix would be to skip unpriced listings when a price limit is set, and leave the price out of the fit card prompt when it's missing. Criterion 4 would then need to say what a card should do when there's no price to mention.
+
+**Vague queries that match but don't suit the wardrobe.** Every test query was a specific item ("cargo pants", "denim jacket") that pairs easily with the example wardrobe. I haven't tested vague queries like "something cute" or "a going-out top", which match listings by loose keywords, or items the wardrobe has nothing to go with, like a dress when the wardrobe is all jeans, tees and sneakers. In those cases I'd expect search to return a weak match, and `suggest_outfit` to either force a strange outfit or invent pieces the user doesn't own, despite the prompt rule against it. None of my criteria check for invented pieces, so this would need its own test.
 
 
 
